@@ -1,0 +1,103 @@
+const pupeteer = require('puppeteer');
+const fs = require('fs');
+const util = require('util');
+const querystring = require('querystring');
+const sourceData  = require('./data/hotcities.json');
+const db = require('./model');
+const hotel = require('./model/Hotel');
+(async () => {
+    let searchBtnClicked = false;
+
+    async function clickBtn(page) {
+        // const searchBtn = await page.$('button.Searchbox__searchButton');
+        // if (!searchBtn) {
+        //     setImmediate(async () => {
+        //         await clickBtn(page);
+        //     });
+        // } else {
+        //     await searchBtn.click();
+        //     searchBtnClicked = true;
+        // }
+    }
+
+    const browser = await pupeteer.launch({
+        args:[
+            '-disable-gpu',
+            '-disable-dev-shm-usage',
+            '-disable-setuid-sandbox',
+            '-no-first-run',
+            '-no-sandbox',
+            '-no-zygote',
+            '-single-process',
+        ]
+    });
+    const page = await browser.newPage();
+    await page.setRequestInterception(true);
+    page.on('request', interceptedRequest => {
+        //console.log(interceptedRequest.url());
+        interceptedRequest.continue();
+    });
+
+    page.on('response', async response => {
+        const url = response.request().url();
+        if (url.startsWith('https://www.agoda.com/api/zh-cn/Main/GetSearchResultList')) {
+            const data = await response.json();
+            console.dir(data);
+        }
+        //console.dir(response.json());
+    });
+
+    page.on('load', async () => {
+        if (searchBtnClicked) {
+            return;
+        }
+        // const windowHandle = await page.evaluateHandle(() => window);
+        // const geoParams = await (await windowHandle.getProperty('geoPageParams')).jsonValue();
+        // const name = geoParams.geoName;
+        // if(!name){
+        //
+        // }
+        // console.log(name);
+        await clickBtn(page);
+    });
+
+
+    //await searchBtn.click();
+
+    await page.goto('https://www.agoda.com/zh-cn/taipo/maps/hong-kong-hk.html?asq=u2qcKLxwzRU5NDuxJ0kOF82tcOVsp2NcLPbmqx9WZhM%3d&cid=-1', {
+        timeout: 30000,
+        waitUntil: 'load',
+    });
+    let params = {
+        area: '25981',
+        checkIn: '2019-06-13',
+        checkOut: '2019-06-14',
+        los: '1',
+        rooms: '1',
+        adults: '2',
+        children: '0',
+        cid: '-1',
+        pageTypeId: '6',
+        origin: 'CN',
+        locale: 'zh-CN',
+        aid: '130243',
+        currencyCode: 'CNY',
+        htmlLanguage: 'zh-cn',
+        cultureInfoName: 'zh-CN',
+        prid: '0',
+        priceCur: 'CNY',
+        productType: '-1',
+        travellerType: '1',
+        familyMode: 'off',
+        pageNumber : 1,
+        pageSize:100,
+    };
+    let paramStr = querystring.stringify(params);
+    await page.goto(`https://www.agoda.com/zh-cn/pages/agoda/default/DestinationSearchResult.aspx?${paramStr}`);
+    console.log(`https://www.agoda.com/zh-cn/pages/agoda/default/DestinationSearchResult.aspx?${paramStr}`);
+    //await browser.close();
+    // setTimeout(async ()=>{
+    //     await  browser.close();
+    // },10000);
+})();
+
