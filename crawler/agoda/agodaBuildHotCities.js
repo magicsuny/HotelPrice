@@ -28,23 +28,28 @@ const appendFile = util.promisify(fs.appendFile);
                 const areaTitle = sec.hotelLinks.title;
                 const pid = sec.hotelLinks.id;
                 const list = sec.hotelLinks.list;
-                list.forEach(async hotel => {
-                    const id = hotel.id;
-                    const title = hotel.text;
-                    const link = hotel.link;
-                    const tempData = {
-                        areaTitle: areaTitle,
-                        areaId: pid,
-                        cityId: id,
-                        cityTitle: title,
-                        link: link,
-                    };
-                    //const line = `${title},${pid},${id},${areaTitle},${link}\n`;
-                    //
-                    dataList.push(tempData);
-                    console.log(`${tempData} write ok`);
-                });
-
+                // list.forEach(async hotel => {
+                //     const id = hotel.id;
+                //     const title = hotel.text;
+                //     const link = hotel.link;
+                //     const tempData = {
+                //         areaTitle: areaTitle,
+                //         areaId: pid,
+                //         cityId: id,
+                //         cityTitle: title,
+                //         link: link,
+                //     };
+                //     //const line = `${title},${pid},${id},${areaTitle},${link}\n`;
+                //     //
+                //     dataList.push(tempData);
+                //     console.log(`${tempData} write ok`);
+                // });
+                const tempData = {
+                    cityId: sec.hotelLinks.id,
+                    cityTitle: sec.hotelLinks.title,
+                    //link: link,
+                };
+                dataList.push(tempData);
             });
             await appendFile(`${__dirname}/data/hotcities.json`, JSON.stringify(dataList));
             await browser.close();

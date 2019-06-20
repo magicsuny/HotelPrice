@@ -60,5 +60,15 @@ typings/
 # next.js build output
 .next
 
-*/node_modules
-*.idea/
+/node_modules
+/.idea
+/build
+/dist
+
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

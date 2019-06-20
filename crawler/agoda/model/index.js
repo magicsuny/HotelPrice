@@ -1,17 +1,17 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-mongoose.set("debug", (collectionName, method, query, doc) => {
-    console.log(`${collectionName}.${method}`, JSON.stringify(query), doc);
-});
+// mongoose.set("debug", (collectionName, method, query, doc) => {
+//     console.log(`${collectionName}.${method}`, JSON.stringify(query), doc);
+// });
 mongoose.connect('mongodb://192.168.99.100:27017/Hotels', {
     poolSize: 10,
     useNewUrlParser: true,
 });
 
-mongoose.connection.on('connected',()=>{
+mongoose.connection.on('connected', () => {
     console.log('Mongodb connected');
 });
-mongoose.connection.on('error',(err)=>{
+mongoose.connection.on('error', (err) => {
     console.error(err);
 });
 
@@ -25,7 +25,8 @@ const FailRequestLogs = mongoose.model('FailRequestLogs', new Schema({
     CheckOut: Date,
 }));
 
-const Hotel = mongoose.model('Hotel', new Schema({
+const Hotel = mongoose.model('Hotels', new Schema({
+    Source: String,
     HotelId: Number,
     CityId: Number,
     CityName: String,
@@ -34,15 +35,31 @@ const Hotel = mongoose.model('Hotel', new Schema({
     ThumbnailUrl: String,
     EnglishHotelName: String,
     HotelDisplayName: String,
+    Latitude: String,
+    Longitude: String,
     HotelUrl: String,
-    Prices: [{
-        date: Date,
-        DisplayPrice: Number,
-        CrossOutPrice: Number,
-        DiscountValue: Number,
-    }]
+    MainPhotoUrl: String,
+    Highlights: [{
+        _id: false,
+        icon: String,
+        id: Number,
+        title: String,
+    }],
+    Prices: {
+        type: mongoose.Mixed
+    }
+    // Prices: [{
+    //     _id:false,
+    //     date: Date,
+    //     formatDate: String,
+    //     url: String,
+    //     DisplayPrice: Number,  //现价
+    //     CrossOutPrice: Number, //原价
+    //     DiscountValue: Number,
+    // }]
 }));
 
 //module.exports = mongoose;
 exports.Hotel = Hotel;
 exports.FailRequestLogs = FailRequestLogs;
+exports.db = mongoose;

@@ -1,14 +1,20 @@
-const request = require('request-promise-native');
+const request = require('request');
 const moment = require('moment');
 const EventEmitter = require('events');
 const model = require('./model');
+const url = require('url');
+const qs = require('querystring');
+const utils = require('../utils/utils');
+
 
 class Crawler {
     constructor(cityId, checkIn) {
         this._event = new EventEmitter();
         this.cityId = cityId;
-        this.checkIn = moment(checkIn);
+        this.checkIn = moment(checkIn).startOf('date');
         this.checkOut = moment(this.checkIn).add(1, 'days');
+        this.startDate = ;
+        this.endDate = ;
         this.failedNumber = 0;
     }
 
@@ -23,6 +29,7 @@ class Crawler {
             'accept': 'application/json',
             'authority': 'www.agoda.com',
             'x-requested-with': 'XMLHttpRequest',
+            'host': 'www.agoda.com',
             'dnt': '1',
         };
     }
@@ -78,9 +85,9 @@ class Crawler {
             'Adults': 2,
             'Children': 0,
             'Rooms': 1,
-            'LengthOfStay': 2,
-            'CheckIn': this.checkIn.toISOString(),
-            'CheckOut': this.checkOut.toISOString(),
+            'LengthOfStay': 1,
+            'CheckIn': this.checkIn.format('YYYY-MM-DD'),
+            'CheckOut': this.checkOut.format('YYYY-MM-DD'),
             'ChildAges': [],
             'DefaultChildAge': 8,
             'IsDateless': false,
@@ -98,42 +105,59 @@ class Crawler {
         let fb = model.FailRequestLogs({
             CityId: this.cityId,
             PageSize: pageSize,
-            pageNumber: pageNumber,
+            PageNumber: pageNumber,
             CheckIn: this.checkIn.toDate(),
             RequestId: this.requestId,
         });
         await fb.save();
-        console.log(`Request FailBack saved: ${this.requestId}`);
+        console.error(`Request FailBack saved: ${this.requestId}`);
     }
 
     async _saveHotel(resultList) {
         if (!Array.isArray(resultList)) {
             return;
         }
-        resultList.forEach(async (hotel) => {
-            let res = await model.Hotel.updateOne({HotelId: hotel.HotelID}, {
+        await utils.mapLimit(resultList, 10, async (hotel) => {
+            let baseUrl = url.parse(hotel.HotelUrl).pathname;
+            let urlParams = qs.parse(url.parse(hotel.HotelUrl).query);
+            urlParams.checkin = this.checkIn.format('YYYY-MM-DD');
+            urlParams.los = 1;
+            let dailyHotelUrl = `${baseUrl}?${qs.stringify(urlParams)}`;
+            let updateContent = {
+                Source: 'Agoda',
                 HotelId: hotel.HotelID,
                 CityId: hotel.CityId,
                 CityName: hotel.CityName,
                 CountryId: hotel.CountryId,
                 CountryName: hotel.CountryName,
                 HotelUrl: hotel.HotelUrl,
-                ThumbnailUrl: hotel.galleryContainerProps.mainImages[0].imageItemProps.url,
+                MainPhotoUrl: hotel.MainPhotoUrl,
                 EnglishHotelName: hotel.EnglishHotelName,
                 HotelDisplayName: hotel.HotelDisplayName,
-                $push: {
-                    Prices: {
-                        date: this.checkIn.toDate(),
-                        DisplayPrice: hotel.DisplayPrice,
-                        CrossOutPrice: hotel.CrossOutPrice,
-                        DiscountValue: hotel.DiscountValue ? hotel.DiscountValue : 0
-                    }
+                Latitude: hotel.Latitude,
+                Longitude: hotel.Longitude,
+                Highlights: hotel.Highlights,
+                [`Prices.${this.checkIn.format('YYYY-MM-DD')}`]: {
+                    date: this.checkIn.toDate(),
+                    formatDate: this.checkIn.format('YYYY-MM-DD'),
+                    url: dailyHotelUrl,
+                    DisplayPrice: hotel.DisplayPrice,
+                    CrossOutPrice: hotel.CrossOutPrice,
+                    DiscountValue: hotel.FormattedDiscountValue ? hotel.FormattedDiscountValue : 10
                 }
-            }, {upsert: true});
-        })
+            };
+            let result = await model.Hotel.updateOne({HotelId: hotel.HotelID}, updateContent, {
+                upsert: true
+            });
+            //
+        });
+
+    }
+    async loopWithDate(){
+
     }
 
-    async doSingleTask(pageSize, pageNumber) {
+    async doSingleTask(pageSize, pageNumber, delay = 0) {
         this.requestId = `${this.cityId}-${pageSize}-${pageNumber}-${this.checkIn.unix()}`;
         const options = {
             uri: 'https://www.agoda.com/api/zh-cn/Main/GetSearchResultList?cid=-1',
@@ -143,34 +167,61 @@ class Crawler {
             json: true,
             encoding: 'utf8',
             gzip: true,
+            //followRedirect:true,
+            //followAllRedirects:true,
+            // proxy:{
+            //     hostname:'183.129.207.89',
+            //     port:27794,
+            //     protocol:'https:'
+            // },
+            // tunnel:true,
         };
+        if (delay > 0) {
+            await utils.sleep(delay);
+        }
         try {
-            let body = await request(options);
+            let body = await utils.request(options);
+            if (!(body instanceof Object)) {
+                await this.retry(pageSize, pageNumber, 5);
+            }
             this._event.emit('complete', body);
             this.failedNumber = 0;
             console.log(`Request complete: ${this.requestId}`);
             if (body.ResultList && body.ResultList.length > 0) {
                 return body.ResultList;
             } else {
-                return false;
+                return [];
             }
         } catch (e) {
-            console.error(e);
+            await this.retry(pageSize, pageNumber, 5);
+        }A  亲爱QAQ爱穷啊·1
+
+    }
+
+    async retry(pageSize, pageNumber, limit = 5) {
+        this.failedNumber++;
+        //this._event.emit('error', this);
+        if (this.failedNumber <= limit) {
+            //retry
+            console.error(`Request Error: ${this.requestId} retry ${this.failedNumber} times`);
+            await this.doSingleTask(pageSize, pageNumber, this.failedNumber * 1000);
+        } else {
+            this._event.emit('error', 'request error');
             await this._failBack(pageSize, pageNumber);
-            this.failedNumber++;
-            this._event.emit('error', e);
-            return this.failedNumber <= 10;
         }
     }
 
     async start() {
         let pageSize = 45;
         let pageNumber = 1;
-        let result = true;
-        while (result) {
-            result = await this.doSingleTask(pageSize, pageNumber);
+        while (true) {
+            let result = await this.doSingleTask(pageSize, pageNumber);
+            if (result.length === 0) {
+                return true;
+            }
             await this._saveHotel(result);
             pageNumber++;
+            console.log('HotelId:', hotel.HotelID, ' saved');
         }
     }
 }
