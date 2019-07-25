@@ -64,6 +64,7 @@ typings/
 /.idea
 /build
 /dist
+dist/
 
 .idea
 .vscode

@@ -5,6 +5,8 @@ const model = require('./model');
 const url = require('url');
 const qs = require('querystring');
 const utils = require('../utils/utils');
+const UserAgent = require('user-agents');
+const IpProxyService = require('../ipProxy/IpProxyService');
 
 
 class Crawler {
@@ -13,17 +15,19 @@ class Crawler {
         this.cityId = cityId;
         this.checkIn = moment(checkIn).startOf('date');
         this.checkOut = moment(this.checkIn).add(1, 'days');
-        this.startDate = ;
-        this.endDate = ;
         this.failedNumber = 0;
     }
 
+    static _generatorAgent(){
+        const userAgent = new UserAgent({ deviceCategory: 'tablet' });
+        return userAgent.random().toString();
+    }
     // 构建header
     static _buildHeader() {
         return {
             'origin': 'https://www.agoda.com',
             'accept-encoding': 'gzip, deflate, br',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36',
+            'user-agent': Crawler._generatorAgent(),
             'content-type': 'application/json; charset=UTF-8',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,ja;q=0.7,zh-TW;q=0.6',
             'accept': 'application/json',
@@ -32,6 +36,24 @@ class Crawler {
             'host': 'www.agoda.com',
             'dnt': '1',
         };
+    }
+
+    /**
+     * 随机获取代理
+     * @returns {*}
+     * @private
+     */
+    _getRandomProxy(){
+        if(this.proxies.length>0){
+            let randomIndex =  Math.floor(Math.random()*this.proxies.length);
+            let {ip:hostname,port:port,protocol:protocol} = this.proxies[randomIndex];
+            return {
+                hostname,
+                port,
+                protocol:`${protocol}:`
+            }
+
+        }
     }
 
     //构建请求参数
@@ -153,9 +175,6 @@ class Crawler {
         });
 
     }
-    async loopWithDate(){
-
-    }
 
     async doSingleTask(pageSize, pageNumber, delay = 0) {
         this.requestId = `${this.cityId}-${pageSize}-${pageNumber}-${this.checkIn.unix()}`;
@@ -176,12 +195,13 @@ class Crawler {
             // },
             // tunnel:true,
         };
+        options.proxy = this._getRandomProxy();
         if (delay > 0) {
             await utils.sleep(delay);
         }
         try {
             let body = await utils.request(options);
-            if (!(body instanceof Object)) {
+            if (!body||!(body instanceof Object)) {
                 await this.retry(pageSize, pageNumber, 5);
             }
             this._event.emit('complete', body);
@@ -194,8 +214,7 @@ class Crawler {
             }
         } catch (e) {
             await this.retry(pageSize, pageNumber, 5);
-        }A  亲爱QAQ爱穷啊·1
-
+        }
     }
 
     async retry(pageSize, pageNumber, limit = 5) {
@@ -212,16 +231,18 @@ class Crawler {
     }
 
     async start() {
+        this.proxies = await IpProxyService.getRandom(10);
         let pageSize = 45;
         let pageNumber = 1;
         while (true) {
-            let result = await this.doSingleTask(pageSize, pageNumber);
-            if (result.length === 0) {
-                return true;
-            }
+            let result = await this.doSingleTask(pageSize, pageNumber,Math.floor(Math.random()*500));
             await this._saveHotel(result);
+            utils.sleep(1000);
+            if (result.length === 0) {
+                return Promise.resolve(true);
+            }
             pageNumber++;
-            console.log('HotelId:', hotel.HotelID, ' saved');
+            console.log(`city ${this.cityId}  ${result.length} hotels saved`);
         }
     }
 }

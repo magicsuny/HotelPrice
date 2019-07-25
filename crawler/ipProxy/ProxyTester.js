@@ -1,38 +1,24 @@
-const proxies = require('./data/proxies');
-const request = require('request');
+const model = require('./model');
 const fs = require('fs');
 const util = require('util');
 const utils = require('../utils/utils');
-const appendFile = util.promisify(fs.appendFile);
+const Agent = require('socks5-http-client/lib/Agent');
 
-async function test(){
-    try{
-        let result = await utils.mapLimit(proxies,5,doRequest);
-        await appendFile(`${__dirname}/data/good_proxies.json`, JSON.stringify(result));
-    }catch(e){
-        console.error(e);
+
+async function testProxy() {
+    let limit = 100;
+    let skip = 0;
+    while (true) {
+        let resultList = await model.Proxy.find({isValid:true}).limit(limit);
+        await utils.mapLimit(resultList, 50, testRequest);
+        if (resultList.length === 0) {
+            break;
+        }
     }
-
-    process.exit(0);
 }
 
-async function req(options){
-    return new Promise((resolve,reject)=>{
-        let _req = request(options,(e,r,body)=>{
-            if(e){
-                reject(e);
-            }else{
-                resolve(body);
-            }
-        });
-        setTimeout(()=>{
-            _req.abort();
-            reject('time out!');
-        },3000);
-    })
-}
 
-async function doRequest(proxy){
+async function testRequest(proxy) {
     const options = {
         uri: 'https://www.baidu.com',
         method: 'GET',
@@ -40,23 +26,45 @@ async function doRequest(proxy){
         gzip: true,
         //followRedirect:true,
         //followAllRedirects:true,
-        timeout:1,
-        pool:{
-            maxSockets:50,
-        },
-        proxy:{
-            hostname:proxy.ip,
-            port:proxy.port,
-            protocol:`${proxy.protocol}:`
+        timeout: 5000,
+        pool: {
+            maxSockets: 50,
         },
     };
-    console.log('trying proxy:',proxy);
-    try{
-        let body =  await req(options);
-        return proxy;
-    }catch(e){
-        console.error('proxy CAN`t use',proxy);
+    if (proxy.protocol.toLowerCase().startsWith('http')) {
+        options.proxy = {
+            hostname: proxy.ip,
+            port: proxy.port,
+            protocol: `${proxy.protocol}:`
+        };
+    } else {
+        options.agentClass = Agent;
+        options.agentOptions = {
+            socksHost: proxy.ip,
+            socksPort: proxy.port
+        }
+    }
+    console.log('trying proxy:', proxy);
+    try {
+        let body = await utils.request(options);
+        return Promise.resolve(proxy);
+    } catch (e) {
+        //await model.Proxy.deleteMany({ip: proxy.ip, port: proxy.port});
+        await model.Proxy.updateMany({ip:proxy.ip,port:proxy.port},{isValid:false});
+        //console.error('proxy CAN`t use', proxy);
     }
 }
+process.on('uncaughtException', function(err) {
+    console.log(err.stack);
+    console.log('NOT exit...');
+});
 
-(async ()=>await test())();
+
+(async () => {
+    try{
+        await testProxy();
+    }catch(e){
+    }
+
+    Promise.resolve().then(()=>process.exit(0));
+})();

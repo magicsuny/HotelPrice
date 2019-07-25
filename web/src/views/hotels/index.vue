@@ -1,5 +1,15 @@
 <template>
   <div class="app-container">
+    <el-form :inline="true" :model="conditions" class="demo-form-inline">
+      <el-form-item label="活动区域">
+        <el-select v-model="conditions.cityId" placeholder="城市">
+          <el-option v-for="city in conditionsData.cities" :label="city.cityName" :value="city.cityId" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="onQuery">查询</el-button>
+      </el-form-item>
+    </el-form>
     <el-table
       v-loading="listLoading"
       :data="list"
@@ -8,10 +18,10 @@
       fit
       highlight-current-row
     >
-      <el-table-column type="expand" align="center" label="序号" width="95">
-        <hotel-detail slot-scope="scope" :data="scope.row">
-        </hotel-detail>
+      <el-table-column type="expand" align="center" label="" width="95">
+        <hotel-detail slot-scope="scope" :data="scope.row" />
       </el-table-column>
+      <el-table-column type="index" :index="indexMethod" align="center" label="序号" width="95" />
       <el-table-column label="酒店名称">
         <template slot-scope="scope">
           {{ scope.row.HotelDisplayName }}
@@ -26,7 +36,9 @@
       <el-table-column class-name="status-col" label="最高折扣(三个月内)" width="110" align="center">
         <template slot-scope="scope">
           <!--<el-tag :type="scope.row.status | statusFilter">{{ scope.row.status }}</el-tag>-->
-          <el-tag v-if="scope.row.minPrice.discount>0" class="discountTag" color="#67C23A">{{scope.row.minPrice.discount}}%off</el-tag>
+          <el-tag v-if="scope.row.minPrice.discount>0" class="discountTag" color="#67C23A">
+            {{ scope.row.minPrice.discount }}%off
+          </el-tag>
           <el-tag v-if="scope.row.minPrice.discount===0" class="discountTag" color="#909399">无折扣</el-tag>
         </template>
       </el-table-column>
@@ -36,71 +48,81 @@
         </template>
       </el-table-column>
 
-
     </el-table>
     <el-pagination
       :page-size="pagination.pageSize"
       :pager-count="9"
       :current-page="pagination.pageNumber"
-      @current-change="pageChange"
       layout="prev, pager, next"
-      :total="pagination.total">
-    </el-pagination>
+      :total="pagination.total"
+      @current-change="pageChange"
+    />
   </div>
 </template>
 
 <script>
-  import {getList} from '@/api/hotel'
-  import HotelDetail from './HotelDetail'
+import { getList, initCondition } from '@/api/hotel'
+import HotelDetail from './HotelDetail'
 
-  export default {
-    components: {HotelDetail},
-    filters: {
-      statusFilter(status) {
-        const statusMap = {
-          published: 'success',
-          draft: 'gray',
-          deleted: 'danger'
-        }
-        return statusMap[status]
+export default {
+  components: { HotelDetail },
+  filters: {
+    statusFilter(status) {
+      const statusMap = {
+        published: 'success',
+        draft: 'gray',
+        deleted: 'danger'
       }
+      return statusMap[status]
+    }
+  },
+  data() {
+    return {
+      list: null,
+      listLoading: true,
+      pagination: {
+        pageNumber: 1,
+        pageSize: 50,
+        total: 0
+      },
+      conditionsData: {},
+      conditions: {}
+    }
+  },
+  created() {
+    this.initQuery()
+    this.fetchData()
+  },
+  methods: {
+    initQuery() {
+      initCondition().then(response => {
+        this.conditionsData.cities = response.data
+      })
     },
-    data() {
-      return {
-        list: null,
-        listLoading: true,
-        pagination: {
-            pageNumber:1,
-            pageSize:20,
-            total:0,
-        },
-        conditions:{
-
-        },
-      }
+    fetchData() {
+      Object.assign(this.conditions, this.pagination)
+      this.listLoading = true
+      getList(this.conditions).then(response => {
+        this.list = response.data.rows
+        this.pagination.total = response.data.total
+        this.listLoading = false
+      })
     },
-    created() {
+    pageChange(page) {
+      this.pagination.pageNumber = page
       this.fetchData()
     },
-    methods: {
-      fetchData() {
-        Object.assign(this.conditions,this.pagination);
-        this.listLoading = true
-        getList(this.conditions).then(response => {
-          this.list = response.data.rows
-          this.pagination.total = response.data.total
-          this.listLoading = false
-        })
-      },
-      pageChange(page){
-        this.pagination.pageNumber = page
-        this.fetchData()
-      }
+    onQuery() {
+      this.fetchData()
+    },
+    indexMethod(index) {
+      return 1 + index + (this.pagination.pageNumber - 1) * this.pagination.pageSize
     }
   }
+}
 </script>
 <style>
-.discountTag{
-  color:black;
-}
+  .discountTag {
+    color: black;
+  }
 </style>

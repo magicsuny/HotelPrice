@@ -1,7 +1,6 @@
 const pupeteer = require('puppeteer');
-const fs = require('fs');
-const util = require('util');
-const appendFile = util.promisify(fs.appendFile);
+const model = require('./model');
+
 (async () => {
     const browser = await pupeteer.launch({
         args:[
@@ -51,7 +50,7 @@ const appendFile = util.promisify(fs.appendFile);
                 };
                 dataList.push(tempData);
             });
-            await appendFile(`${__dirname}/data/hotcities.json`, JSON.stringify(dataList));
+            await model.City.create(dataList);
             await browser.close();
             console.log('hot cities save ok!');
             process.exit(0);

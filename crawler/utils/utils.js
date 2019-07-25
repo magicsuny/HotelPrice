@@ -1,25 +1,36 @@
 const request = require('request');
 
 exports.request = async function (options) {
-    return new Promise((resolve, reject) => {
-        let _req = request(options, (e, r, body) => {
-            if (e) {
-                reject(e);
-            } else {
-                resolve(body);
-            }
-        });
-        setTimeout(() => {
-            _req.abort();
-            reject('time out!');
-        }, options.timeout||10000);
-    })
+    let _req;
+    return Promise.race([
+        new Promise((resolve, reject) => {
+             _req = request(options, (e, r, body) => {
+                if (e) {
+                    reject(e);
+                } else {
+                    resolve(body);
+                }
+            });
+        }),
+        new Promise((resolve, reject) => {
+            let _t = setTimeout(() => {
+                clearTimeout(_t);
+                try {
+                    _req.abort();
+                } catch (e) {
+                    reject('time out!');
+                }
+                reject('time out!');
+            }, options.timeout || 10000);
+        })
+    ]);
 };
 
 
 exports.sleep = async function (time) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => {
+        let _t = setTimeout(() => {
+            clearTimeout(_t);
             resolve();
         }, time);
     });

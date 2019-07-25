@@ -8,7 +8,7 @@ const Hotels = require('../model').Hotel;
  * @returns {Promise<*>}
  */
 const list = async function (cityId, pageSize, pageNumber) {
-    let skip = (pageSize - 1) * pageNumber;
+    let skip = (pageNumber - 1) * pageSize;
     const condition = {Source: 'Agoda'};
     if (cityId) {
         condition.CityId = cityId;

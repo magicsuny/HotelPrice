@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-// mongoose.set("debug", (collectionName, method, query, doc) => {
-//     console.log(`${collectionName}.${method}`, JSON.stringify(query), doc);
-// });
+mongoose.set("debug", (collectionName, method, query, doc) => {
+    console.log(`${collectionName}.${method}`, JSON.stringify(query), doc);
+});
 mongoose.connect('mongodb://192.168.99.100:27017/Hotels', {
     poolSize: 10,
     useNewUrlParser: true,
@@ -15,8 +15,13 @@ mongoose.connection.on('error', (err) => {
     console.error(err);
 });
 
+const User = mongoose.model('Users',new Schema({
+    Email:String,
+    Password:String,
+    Level:String,
+}));
 
-const FailRequestLogs = mongoose.model('FailRequestLogs', new Schema({
+const FailRequestLog = mongoose.model('FailRequestLogs', new Schema({
     RequestId: String,
     CityId: Number,
     PageSize: Number,
@@ -40,7 +45,6 @@ const Hotel = mongoose.model('Hotels', new Schema({
     HotelUrl: String,
     MainPhotoUrl: String,
     Highlights: [{
-        _id: false,
         icon: String,
         id: Number,
         title: String,
@@ -49,7 +53,6 @@ const Hotel = mongoose.model('Hotels', new Schema({
         type: mongoose.Mixed
     }
     // Prices: [{
-    //     _id:false,
     //     date: Date,
     //     formatDate: String,
     //     url: String,
@@ -59,7 +62,14 @@ const Hotel = mongoose.model('Hotels', new Schema({
     // }]
 }));
 
+const City = mongoose.model('Cities',new Schema({
+    cityId:Number,
+    cityTitle:String,
+    source:String,
+}));
+
 //module.exports = mongoose;
 exports.Hotel = Hotel;
-exports.FailRequestLogs = FailRequestLogs;
-exports.db = mongoose;
+exports.FailRequestLog = FailRequestLog;
+exports.User = User;
+exports.City = City;
