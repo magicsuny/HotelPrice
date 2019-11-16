@@ -6,11 +6,11 @@ const Agent = require('socks5-http-client/lib/Agent');
 
 
 async function testProxy() {
-    let limit = 100;
+    let limit = 1000;
     let skip = 0;
     while (true) {
         let resultList = await model.Proxy.find({isValid:true}).limit(limit);
-        await utils.mapLimit(resultList, 50, testRequest);
+        await utils.mapLimit(resultList, 300, testRequest);
         if (resultList.length === 0) {
             break;
         }
@@ -20,7 +20,7 @@ async function testProxy() {
 
 async function testRequest(proxy) {
     const options = {
-        uri: 'https://www.baidu.com',
+        uri: 'https://www.agoda.com',
         method: 'GET',
         encoding: 'utf8',
         gzip: true,
@@ -47,6 +47,7 @@ async function testRequest(proxy) {
     console.log('trying proxy:', proxy);
     try {
         let body = await utils.request(options);
+        await model.Proxy.updateMany({ip:proxy.ip,port:proxy.port},{isValid:true});
         return Promise.resolve(proxy);
     } catch (e) {
         //await model.Proxy.deleteMany({ip: proxy.ip, port: proxy.port});

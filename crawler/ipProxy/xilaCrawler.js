@@ -41,7 +41,7 @@ async function init() {
             });
             await model.Proxy.create(list);
         } catch (e) {
-            debugger;
+
         }
         console.log('ip proxies save ok!');
     });

@@ -39,7 +39,7 @@ async function init() {
             await model.Proxy.create(list);
             console.log('ip proxies save ok!');
         } catch (e) {
-            debugger;
+
         }
         console.log('ip proxies save ok!');
     });
