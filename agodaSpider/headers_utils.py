@@ -1,7 +1,7 @@
 from fake_useragent import UserAgent
 import random
 
-user_agent = UserAgent()
+user_agent = UserAgent(use_cache_server=False)
 
 
 def generate_headers():
