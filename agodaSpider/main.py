@@ -50,7 +50,8 @@ def fetchHotelsByTask(crawler):
     # checkIn = datetime.fromtimestamp(task['checkIn'])
     # crawler = CityHotelsCrawler(cityId=task['cityId'], checkIn=checkIn, pageSize=task['pageSize'],
     #                             pageNumber=task['pageNumber'], proxy=proxyUtils)
-    crawler.doRequest()
+    #crawler.doRequest()
+    crawler.do()
 
 
 def checkTodoTask():

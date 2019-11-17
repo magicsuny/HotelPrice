@@ -86,10 +86,10 @@ class CityHotelsCrawler(object):
         headers = generate_headers()
         params = self.__buildParam(pageNumber)
         proxies = self.proxy.getProxy()
-        print('used proxy', proxies)
-        print('request url %{s} cityId %{s},%{s}', url, params['CityId'], params['PageNumber'])
+        print('request  %{s} cityId %{s},%{s}', self.taskId,params['CityId'], params['PageNumber'])
         response = requests.post(url, headers=headers, json=params, proxies=proxies, timeout=5)
         data = response.json()
+        print(data)
         try:
             return data
         except:
@@ -125,11 +125,13 @@ class CityHotelsCrawler(object):
 
     def do(self):
         try:
-            data = self.__request()
+            data = self.__request(self.pageNumber)
         except Exception as arg:
+            print(arg);
             return
         if (len(data) == 0):
             return
+        print('request success!')
         totalPage = data['TotalPage']
         hotels = data['ResultList']
         for hotel in hotels:
