@@ -89,7 +89,6 @@ class CityHotelsCrawler(object):
         print('request  %{s} cityId %{s},%{s}', self.taskId,params['CityId'], params['PageNumber'])
         response = requests.post(url, headers=headers, json=params, proxies=proxies, timeout=5)
         data = response.json()
-        print(data)
         try:
             return data
         except:
