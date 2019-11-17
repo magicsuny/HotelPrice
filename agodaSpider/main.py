@@ -7,10 +7,12 @@ from time import sleep, time
 from datetime import datetime, timedelta
 import sys
 from proxies_utils import ProxiesUtils
-from functools import partial
+import time
+
+from functools import partial, wraps
 
 multiprocessing.set_start_method('spawn', True)
-workerNum = 5
+workerNum = 3
 loop = asyncio.get_event_loop()
 
 def exeTime(func):
@@ -23,6 +25,27 @@ def exeTime(func):
     return newFunc
 
 
+def desc_time(s):
+    def wapper(func):
+        name = func.__name__  #给变量name赋值 确定访问的函数
+        func_identify = {name: 0,'second': s}
+        @wraps(func)
+        def inner(*args,**kwargs):
+            use_time = func_identify[name]+func_identify['second'] # 需等待这些时间之后才可以再次访问
+
+            now_time = time.time()
+            re_time =use_time - now_time # 这个结果是一个负数
+            if now_time > use_time:  # 如果当前时间大于等待的时间
+                res = func(*args,**kwargs)
+                func_identify[name]= now_time   # 给 func_identify[name] 重新赋值
+            else:
+                time.sleep(s)
+                return inner(*args,**kwargs)
+            return res
+        return inner
+    return wapper
+
+@desc_time(0.2)
 def fetchHotelsByTask(crawler):
     # checkIn = datetime.fromtimestamp(task['checkIn'])
     # crawler = CityHotelsCrawler(cityId=task['cityId'], checkIn=checkIn, pageSize=task['pageSize'],
@@ -100,6 +123,5 @@ if __name__ == '__main__':
         sys.exit(0)
     except Exception as argument:
         print('Program is dead.', argument)
-        sys.exit(-1);
     finally:
         print('clean-up')

@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from time import sleep
 from urllib.parse import parse_qs
 import random
 import requests
@@ -8,7 +7,6 @@ from model import *
 from headers_utils import generate_headers
 
 url = 'https://www.agoda.com/api/zh-cn/Main/GetSearchResultList?cid=-1'
-sleepTime = 1
 
 
 class CityHotelsCrawler(object):
@@ -156,7 +154,6 @@ class CityHotelsCrawler(object):
             model.updateTask(self.taskId, self.checkIn.timestamp(), self.pageSize, self.pageNumber)
             print(f'taskId: {self.taskId} saved page {self.pageNumber}')
             self.pageNumber += 1
-            sleep(random.uniform(sleepTime, sleepTime+0.5))
         self.checkIn = self.checkIn + timedelta(days=1)
         model.updateTask(self.taskId, self.checkIn.timestamp(), self.pageSize, self.pageNumber, True)
         print(f'crawler {self.taskId} is Done')

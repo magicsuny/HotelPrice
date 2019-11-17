@@ -8,8 +8,8 @@ proxyHost = "dyn.horocn.com"
 proxyPort = "50000"
 
 # 代理隧道验证信息
-proxyUser = "ASLI1650344402119161"
-proxyPass = "OAXAlXXsUwlrKDU3"
+proxyUser = "Z9VR1650416917884074"
+proxyPass = "CdX7ixFgtDPd"
 
 class ProxiesUtils:
     def __init__(self):
