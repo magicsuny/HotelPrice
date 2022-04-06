@@ -40,7 +40,7 @@ more-itertools==7.0.0
 multidict==4.5.2
 nbconvert==5.5.0
 nbformat==4.4.0
-notebook==6.0.0
+notebook==6.4.10
 packaging==19.0
 pandocfilters==1.4.2
 parsel==1.5.1
