@@ -33,7 +33,7 @@ jupyter-client==5.3.1
 jupyter-core==4.5.0
 jupyterlab==0.35.5
 jupyterlab-server==0.2.0
-lxml==4.3.3
+lxml==4.9.1
 MarkupSafe==1.1.1
 mistune==0.8.4
 more-itertools==7.0.0
